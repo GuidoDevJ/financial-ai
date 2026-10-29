@@ -1,0 +1,18 @@
+{
+  "client_001": [
+    {"ticker": "GGAL", "cantidad": 150, "mercado": "nyse"},
+    {"ticker": "YPFD.BA", "cantidad": 80, "mercado": "byma"},
+    {"ticker": "PAMP.BA", "cantidad": 200, "mercado": "byma"}
+  ],
+  "client_002": [
+    {"ticker": "BMA", "cantidad": 60, "mercado": "nyse"},
+    {"ticker": "MELI", "cantidad": 10, "mercado": "nyse"},
+    {"ticker": "GGAL", "cantidad": 300, "mercado": "nyse"}
+  ],
+  "client_003": [
+    {"ticker": "YPFD.BA", "cantidad": 500, "mercado": "byma"},
+    {"ticker": "PAMP.BA", "cantidad": 120, "mercado": "byma"},
+    {"ticker": "BMA", "cantidad": 40, "mercado": "nyse"},
+    {"ticker": "MELI", "cantidad": 5, "mercado": "nyse"}
+  ]
+}

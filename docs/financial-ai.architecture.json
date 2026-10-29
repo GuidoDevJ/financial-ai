@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "financial-ai — Arquitectura",
+    "output": "financial-ai-architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "chat-path",
+        "label": "Chat y tools",
+        "focus": ["client", "fastapi", "agents", "tools", "bedrock", "redis", "iol"],
+        "note": "Camino principal de la consulta del usuario hasta LLM, tools y estado."
+      },
+      {
+        "id": "ingest-path",
+        "label": "Ingesta de noticias",
+        "focus": ["fastapi", "ingest", "rss", "bedrock", "redis"],
+        "note": "Ciclo de ingesta RSS: fetch, embeddings y vector store en Redis."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "client",
+      "type": "external",
+      "label": "Clientes",
+      "sublabel": "HTTP + API key",
+      "pos": [40, 220],
+      "size": [130, 60]
+    },
+    {
+      "id": "fastapi",
+      "type": "backend",
+      "label": "FastAPI",
+      "sublabel": "app/main.py · uvicorn",
+      "tag": "/chat /brief /news /health",
+      "pos": [250, 216],
+      "size": [160, 68]
+    },
+    {
+      "id": "agents",
+      "type": "backend",
+      "label": "Agente chat",
+      "sublabel": "LangGraph",
+      "pos": [480, 220],
+      "size": [140, 64]
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "Tools",
+      "sublabel": "search_news · get_price · get_macro",
+      "pos": [480, 360],
+      "size": [180, 68]
+    },
+    {
+      "id": "bedrock",
+      "type": "external",
+      "label": "Amazon Bedrock",
+      "sublabel": "Claude + embeddings",
+      "pos": [1040, 120],
+      "size": [160, 72]
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis",
+      "sublabel": "locks · briefs · RediSearch",
+      "pos": [250, 360],
+      "size": [170, 68]
+    },
+    {
+      "id": "ingest",
+      "type": "backend",
+      "label": "Ingesta RSS",
+      "sublabel": "APScheduler · /news/ingest",
+      "pos": [700, 440],
+      "size": [160, 64]
+    },
+    {
+      "id": "rss",
+      "type": "external",
+      "label": "RSS económicos",
+      "sublabel": "NEWS_RSS_URLS (10)",
+      "pos": [700, 530],
+      "size": [160, 64]
+    },
+    {
+      "id": "iol",
+      "type": "external",
+      "label": "IOL API",
+      "sublabel": "precios y cartera",
+      "pos": [1040, 360],
+      "size": [150, 64]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Auth: API keys",
+      "wraps": ["fastapi"],
+      "pad": 22
+    }
+  ],
+  "connections": [
+    {
+      "id": "client-api",
+      "from": "client",
+      "to": "fastapi",
+      "label": "HTTPS · API key",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api-chat",
+      "from": "fastapi",
+      "to": "agents",
+      "label": "POST /chat"
+    },
+    {
+      "id": "api-redis",
+      "from": "fastapi",
+      "to": "redis",
+      "label": "locks + brief store",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "agents-tools",
+      "from": "agents",
+      "to": "tools",
+      "label": "tool calls",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "agents-bedrock",
+      "from": "agents",
+      "to": "bedrock",
+      "label": "Converse (Claude)"
+    },
+    {
+      "id": "tools-redis",
+      "from": "tools",
+      "to": "redis",
+      "label": "search_news / briefs",
+      "fromSide": "left",
+      "toSide": "right",
+      "labelDy": 58
+    },
+    {
+      "id": "tools-iol",
+      "from": "tools",
+      "to": "iol",
+      "label": "get_price / get_macro",
+      "fromSide": "right",
+      "toSide": "left",
+      "labelAt": [800, 394]
+    },
+    {
+      "id": "ingest-rss",
+      "from": "ingest",
+      "to": "rss",
+      "label": "GET poll",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [780, 517]
+    },
+    {
+      "id": "ingest-bedrock",
+      "from": "ingest",
+      "to": "bedrock",
+      "label": "embeddings",
+      "fromSide": "right",
+      "toSide": "right",
+      "via": [[1230, 472], [1230, 156]]
+    },
+    {
+      "id": "ingest-redis",
+      "from": "ingest",
+      "to": "redis",
+      "label": "upsert RediSearch",
+      "fromSide": "left",
+      "toSide": "bottom",
+      "via": [[335, 472]]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Ingesta",
+      "items": [
+        "Scheduler cada 90 min o POST /news/ingest con lock Redis",
+        "Fetch con validación RSS/Atom; embeddings Bedrock y upsert en RediSearch"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Chat y briefs",
+      "items": [
+        "POST /chat ejecuta el graph LangGraph con tools",
+        "Brief diario con lock por cliente/fecha en Redis; SMTP opcional"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Seguridad",
+      "items": [
+        "API keys por cliente (AUTH_API_KEYS); ADMIN_API_KEYS para /news",
+        "Guardrails y prompts versionados en Bedrock Prompt Management"
+      ]
+    }
+  ]
+}
